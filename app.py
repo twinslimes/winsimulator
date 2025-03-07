@@ -21,7 +21,8 @@ if 'stock_data' not in st.session_state:
         'times': times,
         'prices': prices.tolist(),
         'last_action': None,
-        'last_action_time': None
+        'last_action_time': None,
+        'trend': 'up'  # Track current trend
     }
 
 # Page config
@@ -41,6 +42,7 @@ if col1.button("Buy 📈"):
     st.session_state.stock_data['prices'].append(new_price)
     st.session_state.stock_data['last_action'] = 'buy'
     st.session_state.stock_data['last_action_time'] = current_time
+    st.session_state.stock_data['trend'] = 'up'
 
 # Sell button
 if col2.button("Sell 📉"):
@@ -52,6 +54,29 @@ if col2.button("Sell 📉"):
     st.session_state.stock_data['prices'].append(new_price)
     st.session_state.stock_data['last_action'] = 'sell'
     st.session_state.stock_data['last_action_time'] = current_time
+    st.session_state.stock_data['trend'] = 'down'
+
+# Add natural price movement
+current_time = datetime.now()
+last_price = st.session_state.stock_data['prices'][-1]
+
+# Determine movement based on current trend with some randomness
+trend_factor = 1.0005 if st.session_state.stock_data['trend'] == 'up' else 0.9995
+random_factor = np.random.normal(1, 0.001)  # Small random variations
+new_price = last_price * trend_factor * random_factor
+
+# Occasionally change trend
+if np.random.random() < 0.05:  # 5% chance to switch trend
+    st.session_state.stock_data['trend'] = 'down' if st.session_state.stock_data['trend'] == 'up' else 'up'
+
+# Update data
+st.session_state.stock_data['times'].append(current_time)
+st.session_state.stock_data['prices'].append(new_price)
+
+# Keep only last 60 minutes of data
+if len(st.session_state.stock_data['times']) > 60:
+    st.session_state.stock_data['times'] = st.session_state.stock_data['times'][-60:]
+    st.session_state.stock_data['prices'] = st.session_state.stock_data['prices'][-60:]
 
 # Create the stock chart
 fig = go.Figure()
@@ -92,6 +117,6 @@ col3.metric("Time Since Last Action",
             f"{(datetime.now() - st.session_state.stock_data['last_action_time']).seconds}s ago" 
             if st.session_state.stock_data['last_action_time'] else "N/A")
 
-# Auto-refresh every 2 seconds
-time.sleep(2)
+# Refresh every 1 second
+time.sleep(1)
 st.experimental_rerun() 
